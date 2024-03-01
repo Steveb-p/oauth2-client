@@ -29,6 +29,7 @@ use League\OAuth2\Client\Tool\ArrayAccessorTrait;
 use League\OAuth2\Client\Tool\GuardedPropertyTrait;
 use League\OAuth2\Client\Tool\QueryBuilderTrait;
 use League\OAuth2\Client\Tool\RequestFactory;
+use Psr\Http\Client\ClientInterface;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
 use UnexpectedValueException;
@@ -108,7 +109,7 @@ abstract class AbstractProvider
     protected $requestFactory;
 
     /**
-     * @var HttpClientInterface
+     * @var HttpClientInterface|ClientInterface
      */
     protected $httpClient;
 
@@ -228,11 +229,13 @@ abstract class AbstractProvider
     /**
      * Sets the HTTP client instance.
      *
-     * @param  HttpClientInterface $client
+     * @param  HttpClientInterface|ClientInterface $client
      * @return self
      */
-    public function setHttpClient(HttpClientInterface $client)
+    public function setHttpClient($client)
     {
+        assert($client instanceof ClientInterface || $client instanceof HttpClientInterface);
+
         $this->httpClient = $client;
 
         return $this;
@@ -241,7 +244,7 @@ abstract class AbstractProvider
     /**
      * Returns the HTTP client instance.
      *
-     * @return HttpClientInterface
+     * @return HttpClientInterface|ClientInterface
      */
     public function getHttpClient()
     {
@@ -703,7 +706,13 @@ abstract class AbstractProvider
      */
     public function getResponse(RequestInterface $request)
     {
-        return $this->getHttpClient()->send($request);
+        $client = $this->getHttpClient();
+
+        if ($client instanceof ClientInterface) {
+            return $client->sendRequest($request);
+        }
+
+        return $client->send($request);
     }
 
     /**
